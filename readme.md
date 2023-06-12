@@ -47,6 +47,6 @@ Os arquivos **csv** da base de dados, devem baixados diretamento do repositório
 * [Censo Escolar 2015](https://download.inep.gov.br/dados_abertos/microdados_censo_escolar_2015.zip) 
 * [Notas Enem por escola 2005 à 2015](https://download.inep.gov.br/microdados/enem_por_escola/2005_a_2015/microdados_enem_por_escola.zip)
 
-Esses arquivos ficar na pasta **/dags/csv_files**
+Esses arquivos devem ficar na pasta **/dags/csv_files**
 
 ### Resultados

@@ -1,36 +1,27 @@
 from airflow import DAG
-from airflow.models import XCom, Variable
 from airflow.decorators import task
 import pendulum #usada para definir uma data especifica.
-import datetime
-import os
 from os.path import join
 import pandas as pd
 import numpy as np
+from sqlalchemy import create_engine
 
+
+def get_engine_database():
+    engine = create_engine("postgresql://postgres:postgres@0.0.0.0:5436/database_censo_enem")
+    return engine
 
 with DAG(
-    "Dados_censo_enem",
+    "Limpeza_dados_INEP",
     start_date=pendulum.datetime(2023, 6, 3, tz="UTC"),
-
+    tags=["Limpeza_dados"],
     schedule_interval='0 0 * * 6',    
 ) as dag:
-    
-    @task(task_id = "leitura_dados_censo_2015")
-    def tarefa_1(**context):
-        dataset_censo_interno = pd.read_csv("dags/microdados_ed_basica_2015.csv", encoding="latin", sep=";", low_memory=False)
-        context['ti'].xcom_push(key='dataset_senso', value=dataset_censo_interno)
-    
-    @task(task_id = "leitura_notas_enem")
-    def tarefa_2(**context):
-        dataset_enem_interno = pd.read_csv("dags/MICRODADOS_ENEM_ESCOLA.csv", encoding="latin", sep=";", low_memory=False)
-        context['ti'].xcom_push(key='dataset_enem', value=dataset_enem_interno)
-        
-        
-    
+            
     @task(task_id='Limpeza_de_colunas')
-    def tarefa_3(**context):
+    def tarefa_1(**context):
         #context['ti'].xcom_pull(key='dataset_enem')
+        print("teste")
         dataset_censo = context['ti'].xcom_pull(key='dataset_censo', task_id="leitura_dados_censo_2015")
         dataset_enem = context['ti'].xcom_pull(key='dataset_enem', task_id="leitura_notas_enem")
         column_used_from_dataset_enem = [ 
@@ -53,7 +44,7 @@ with DAG(
         return dataset_censo, dataset_enem
     
     @task(task_id='alterando_tipos_de_dados')
-    def tarefa_4(**context):
+    def tarefa_2(**context):
         # Passo 2 - Alterando os tipos de dados.
         # Alterando o tipo da coluna DT_ANO_LETIVO_INICIO e DT_ANO_LETIVO_TERMINO para datetime
         dataset_censo['DT_ANO_LETIVO_INICIO'] = dataset_censo['DT_ANO_LETIVO_INICIO'].replace('0', '02FEB2015')
@@ -69,7 +60,7 @@ with DAG(
 
 
     @task(task_id='tokenizando_dados')
-    def tarefa_5():
+    def tarefa_3():
         # Passo 3 - Tokenizando os dados.
         global dataset_censo
         dataset_censo['NO_MUNICIPIO'] = dataset_censo['NO_MUNICIPIO'].str.replace('[áãâàä]', 'a', regex=True)
@@ -86,7 +77,7 @@ with DAG(
 
 
     @task(task_id='calculando_medias')
-    def tarefa_6():
+    def tarefa_4():
         # Passo 4 - Calculando a média NU_MEDIA_OBJ e NU_MEDIA_TOT.
         global dataset_enem
         media_objetiva = dataset_enem[['NU_MEDIA_CN', 'NU_MEDIA_CH', 'NU_MEDIA_LP', 'NU_MEDIA_MT']].mean(axis=1)
@@ -95,30 +86,7 @@ with DAG(
         media_total = dataset_enem[['NU_MEDIA_CN', 'NU_MEDIA_CH', 'NU_MEDIA_LP', 'NU_MEDIA_MT', 'NU_MEDIA_RED']].mean(axis=1)
         dataset_enem['NU_MEDIA_TOT'] = round(media_objetiva, 2)
 
+
+
+    tarefa_1() >> tarefa_2() >> tarefa_3() >> tarefa_4()
     
-    @task(task_id='filtro_ano_enem')
-    def tarefa_7():
-        # Passo 5 - Mudando o nome da coluna de referência com a tabela do censo.
-        global dataset_enem
-        dataset_enem = dataset_enem.rename(columns={'CO_ESCOLA_EDUCACENSO':'CO_ENTIDADE'})
-        dataset_enem = dataset_enem.loc[dataset_enem['NU_ANO'] == 2015]
-
-    @task(task_id='merge_dos_dados')
-    def tarefa_8():
-        # Passo 7 - Transformando em dataframe
-        global dataset_censo
-        global dataset_enem
-
-        df_censo = pd.DataFrame(dataset_censo)
-        df_enem = pd.DataFrame(dataset_enem)
-
-        # Passo 8 - Fazendo o merge dos datasets
-
-        dataset_censo_enem = pd.merge(df_censo, df_enem,on='CO_ENTIDADE' )
-
-        # Salvando o arquivo trabalhado em *.csv
-
-        dataset_censo_enem.to_csv('./novos_arquivos/dataset_censo_enem.csv', sep=';', encoding="UTF-8")
-
-    tarefa_1() >> tarefa_2() >> tarefa_3() >> tarefa_4() >> \
-    tarefa_5() >> tarefa_6() >> tarefa_7() >> tarefa_8()
