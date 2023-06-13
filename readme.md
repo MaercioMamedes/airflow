@@ -18,21 +18,30 @@ A motivação desse Pipeline é sumarizar uma base de dados estruturados, que po
 * [Thiago de França Rodrigues](https://www.linkedin.com/in/thiago-de-fran%C3%A7a-rodrigues-b6375a27/)
   
 
-### Etapas do Projeto
+### Resumo do Pipeline
 
-* Coleta dos dados do Censo Escolar do ano de 2015
-* Coleta dos dados das Notas do Enem por escola
-* Persistência dos dados brutos em banco de dados
-* Limpeza das colunas não analisadas
-* Limpeza/ajustes de dados não formatados
-* Sumarização dos dados tratados
-* Persistência dos dados sumarizado
+* #### DAG 1 - EXTRAÇÃO DADOS INEP
+  * task 1 - extração dos dados do censo Escolar 2015
+  * task 2 - extração dos dados do Enem por escola de 2005 à 2015
+  * task 3 - persistências dos dados brutos num banco de dados local
+* #### DAG 2 - LIMPEZA DOS DADOS DO CENSO ESCOLAR
+  * task 1 - Filtro das colunas utilizadas para o estudo
+  * task 2 - formatação de dados de data
+  * task 3 - limpeza dos dados da coluna *NO_MUNICIPIO*
+  * task 4 - Persistência em banco de dados
+* #### DAG 3 - LIMPEZA DOS DADOS DO ENEM
+  * task 1 - Filtro das colunas utilizadas para o estudo e mudança do nome da coluna *CO_ESCOLA_EDUCACENSO* para *CO_ENTIDADE*
+  * task 2 - Cálculo das Médias Gerais e das Provas Objetivas
+  * task 3 - Persistências em Banco de dados
+* #### DAG 4 - SUMARIZAÇÃO DOS DADOS
+  * task1 - Merge dos dados Limpos e filtrados, e persistência em Banco de dados
   
 ### Setup do Projeto
 
 Para o desenvolvimento do projetos utilizamos das seguintes tecnologias:
 * Sistema Operacional Linux Ubuntu 22.04
 * Docker 24.0.2
+* Postegresql 14.5
 * Python 3.8.8
 * Apache-Airflow 2.6.0
 
