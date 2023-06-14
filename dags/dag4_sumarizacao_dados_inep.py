@@ -7,8 +7,8 @@ import numpy as np
 from sqlalchemy import create_engine
 
 
-def get_engine_database():
-    engine = create_engine("postgresql://postgres:postgres@0.0.0.0:5436/database_censo_enem")
+def get_engine_database(database):
+    engine = create_engine(f"postgresql://postgres:postgres@0.0.0.0:5436/{database}")
     return engine
 
 with DAG(
@@ -23,18 +23,18 @@ with DAG(
     @task(task_id='merge_dos_dados')
     def tarefa_1():
         # Merge e persistência dos dados
-        global dataset_censo
-        global dataset_enem
+        dataset_censo = pd.read_sql_query('SELECT * FROM censo_2015_clean', con=get_engine_database('database_censo_enem_clean'))
+        dataset_enem = pd.read_sql_query('SELECT * FROM notas_enem', con=get_engine_database('database_censo_enem_clean'))
 
         df_censo = pd.DataFrame(dataset_censo)
         df_enem = pd.DataFrame(dataset_enem)
 
-        # Passo 8 - Fazendo o merge dos datasets
-
+        # Fazendo o merge dos datasets
         dataset_censo_enem = pd.merge(df_censo, df_enem,on='CO_ENTIDADE' )
 
-        # Salvando o arquivo trabalhado em *.csv
+        # Salvando em banco de dados
+        dataset_censo_enem.to_sql('dados_inep_merged', get_engine_database('censo_enem_summarized'))
 
-        dataset_censo_enem.to_csv('./novos_arquivos/dataset_censo_enem.csv', sep=';', encoding="UTF-8")
+        return "Dados sumarizdos e salvos com sucesso"
 
     tarefa_1()

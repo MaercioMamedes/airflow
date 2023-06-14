@@ -30,8 +30,9 @@ with DAG(
     @task(task_id = "leitura_notas_enem")
     def tarefa_2(**context):
         # Extrair dados das Notas do ENEM e persistir num banco de dados
-        dataset_enem_interno = pd.read_csv("dags/MICRODADOS_ENEM_ESCOLA.csv", encoding="latin", sep=";", low_memory=False)
-        context['ti'].xcom_push(key='dataset_enem', value=dataset_enem_interno)
+        dataset_enem = pd.read_csv("dags/MICRODADOS_ENEM_ESCOLA.csv", encoding="latin", sep=";", low_memory=False)
+        df_enem = pd.DataFrame(dataset_enem)
+        df_enem.to_sql('notas_enem', get_engine_database())
         
 
     tarefa_1() >> tarefa_2() 

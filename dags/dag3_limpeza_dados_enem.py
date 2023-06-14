@@ -6,8 +6,8 @@ import pandas as pd
 from sqlalchemy import create_engine
 
 
-def get_engine_database():
-    engine = create_engine("postgresql://postgres:postgres@0.0.0.0:5436/database_censo_enem")
+def get_engine_database(database):
+    engine = create_engine(f"postgresql://postgres:postgres@0.0.0.0:5436/{database}")
     return engine
 
 with DAG(
@@ -20,7 +20,8 @@ with DAG(
     @task(task_id='Limpeza_de_colunas')
     def tarefa_1():
     # Filtro das colunas utilizadas
-        dataset_enem = pd.DataFrame() # realizar pull no banco de dados
+
+        dataset_enem = pd.read_sql_query('SELECT * FROM notas_enem', con=get_engine_database('database_censo_enem_clean'))
 
         column_used_from_dataset_enem = [ 
             'NU_ANO', 'CO_ESCOLA_EDUCACENSO',
@@ -40,27 +41,39 @@ with DAG(
             'NU_TAXA_ABANDONO', 
     ]
         dataset_enem = dataset_enem.filter(items=column_used_from_dataset_enem)
+
+        # mudando nome da coluna com relacionamento para terem o mesmo nome
         dataset_enem = dataset_enem.rename(columns={'CO_ESCOLA_EDUCACENSO':'CO_ENTIDADE'})
+
+        # filtrando as notas do ano de 2015
         dataset_enem = dataset_enem.loc[dataset_enem['NU_ANO'] == 2015]
         
+        # Salvando em banco de dados
+        df_enem = pd.DataFrame(dataset_enem)
+        df_enem.to_sql('notas_enem', get_engine_database('database_censo_enem_clean'), if_exists='replace')
+
         return "Colunas da Tabela Enem filtradas"
 
 
     @task(task_id='calculando_medias')
     def tarefa_2():
+        dataset_enem = pd.read_sql_query('SELECT * FROM notas_enem', con=get_engine_database('database_censo_enem_clean'))
 
-        # Calculando a média NU_MEDIA_OBJ e NU_MEDIA_TOT.
-        global dataset_enem
+        # calculando médias das provas objetivas
         media_objetiva = dataset_enem[['NU_MEDIA_CN', 'NU_MEDIA_CH', 'NU_MEDIA_LP', 'NU_MEDIA_MT']].mean(axis=1)
         dataset_enem['NU_MEDIA_OBJ'] = round(media_objetiva, 2)
 
+        # calculando média total
         media_total = dataset_enem[['NU_MEDIA_CN', 'NU_MEDIA_CH', 'NU_MEDIA_LP', 'NU_MEDIA_MT', 'NU_MEDIA_RED']].mean(axis=1)
-        dataset_enem['NU_MEDIA_TOT'] = round(media_objetiva, 2)
+        dataset_enem['NU_MEDIA_TOT'] = round(media_total, 2)
 
-    
-    @task(task_id='persistindo_dados_enem')
-    def tarefa_3():
-        pass
+        # salvando em banco de dados
+        df_enem = pd.DataFrame(dataset_enem)
+        df_enem.to_sql('notas_enem', get_engine_database('database_censo_enem_clean'), if_exists='replace')
 
-    tarefa_1() >> tarefa_2() >> tarefa_3()
+        return 'Médias calculadas e salvas com sucesso'
+
+
+
+    tarefa_1() >> tarefa_2()
     
