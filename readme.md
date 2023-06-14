@@ -59,3 +59,9 @@ Os arquivos **csv** da base de dados, devem baixados diretamento do repositório
 Esses arquivos devem ficar na pasta **/dags/csv_files**
 
 ### Resultados
+
+![](https://github.com/MaercioMamedes/airflow/blob/master/images/medias_escolas.png?raw=true)
+
+![](https://github.com/MaercioMamedes/airflow/blob/master/images/media_escolas_down.png?raw=true)
+
+![](https://github.com/MaercioMamedes/airflow/blob/master/images/medias_escolas_up.png?raw=true)
